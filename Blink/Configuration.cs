@@ -44,7 +44,7 @@ public class Configuration
     /// During each step, all the messages that can be deleted will be deleted, and then
     /// it will pause this amount of time to check if the oldest message is too old.
     /// </summary>
-    public long DeleteActionDelaySeconds { get; set; } = 5 * 60;
+    public int DeleteActionDelaySeconds { get; set; } = 5 * 60;
 
     /// <summary>
     /// Channels that are cleared by the bot.

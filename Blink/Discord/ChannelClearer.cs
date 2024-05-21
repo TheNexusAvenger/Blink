@@ -187,9 +187,11 @@ public class ChannelClearer
         if (this._running) return;
         Task.Run(async () =>
         {
-            // TODO: Run in loop.
-            if (!this._running) return;
-            await this.PerformDeleteStepAsync();
+            while (this._running)
+            {
+                await this.PerformDeleteStepAsync();
+                await Task.Delay(Configuration.GetConfiguration().DeleteActionDelaySeconds * 1000);
+            }
         });
     }
 
