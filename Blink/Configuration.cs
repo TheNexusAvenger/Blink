@@ -62,7 +62,8 @@ public class Configuration
     /// <returns>Path of the configuration.</returns>
     private static string GetConfigurationPath()
     {
-        return Path.Combine(Directory.GetCurrentDirectory(), "configuration.json"); // TODO: Check environment variable.
+        var path = Environment.GetEnvironmentVariable("CONFIGURATION_FILE_LOCATION");
+        return path ?? Path.Combine(Directory.GetCurrentDirectory(), "configuration.json");
     }
     
     /// <summary>
