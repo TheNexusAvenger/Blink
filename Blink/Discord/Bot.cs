@@ -64,7 +64,7 @@ public class Bot
     /// </summary>
     private Task ClientReadyHandler()
     {
-        // TODO: Connect configuration changing.
+        Configuration.ConfigrationLoaded += _ => UpdateChannelClearers();
         this.UpdateChannelClearers();
         return Task.CompletedTask;
     }

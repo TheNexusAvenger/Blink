@@ -11,6 +11,7 @@ public class Program
     {
         // Load the configuration.
         Configuration.ReadConfiguration();
+        Configuration.ListenForConfigurationChanges();
         
         // Start the Discord bot.
         Logger.Debug("Starting Discord bot.");

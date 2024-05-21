@@ -35,6 +35,11 @@ public class Configuration
     private static Configuration? _configuration;
     
     /// <summary>
+    /// Event for configuration being loaded or reloaded.
+    /// </summary>
+    public static event Action<Configuration>? ConfigrationLoaded;
+    
+    /// <summary>
     /// API key used to communicate with Discord.
     /// </summary>
     public string DiscordApiKey { get; set; } = "";
@@ -52,19 +57,74 @@ public class Configuration
     public List<ChannelConfigurationEntry> Channels { get; set; } = new List<ChannelConfigurationEntry>();
 
     /// <summary>
+    /// Returns the path the configuration.
+    /// </summary>
+    /// <returns>Path of the configuration.</returns>
+    private static string GetConfigurationPath()
+    {
+        return Path.Combine(Directory.GetCurrentDirectory(), "configuration.json"); // TODO: Check environment variable.
+    }
+    
+    /// <summary>
     /// Reads the configuration from the file system.
     /// </summary>
     public static void ReadConfiguration()
     {
+        // Print if the configuration is being reloaded.
+        string originalDiscordToken = null;
+        if (_configuration != null)
+        {
+            Logger.Info("Reloading configuration.");
+            originalDiscordToken = _configuration.DiscordApiKey;
+        }
+        
         // Throw an exception if the configuration does not exist.
-        var configurationPath = "configuration.json"; // TODO: Check environment variable.
+        var configurationPath = GetConfigurationPath();
         if (!File.Exists(configurationPath))
         {
             throw new FileNotFoundException($"Configuration file not found: {configurationPath}");
         }
         
         // Load the configuration.
-        _configuration = JsonSerializer.Deserialize<Configuration>(File.ReadAllText(configurationPath), ConfigurationJsonContext.Default.Configuration)!;
+        // Done with a retry in case the file in use or incomplete while writing.
+        for (var i = 1; i <= 100; i++)
+        {
+            try
+            {
+                _configuration = JsonSerializer.Deserialize(File.ReadAllText(configurationPath), ConfigurationJsonContext.Default.Configuration)!;
+                ConfigrationLoaded?.Invoke(_configuration);
+                break;
+            }
+            catch (Exception e)
+            {
+                if (i == 100)
+                {
+                    Logger.Error($"Failed to be able to read {configurationPath}. The configuration was not reloaded.\n{e}");
+                }
+                else
+                {
+                    Task.Delay(100).Wait();
+                }
+            }
+        }
+        
+        // Warn if the configuration changed.
+        if (originalDiscordToken != null && originalDiscordToken != _configuration!.DiscordApiKey)
+        {
+            Logger.Warn("Discord API key refreshing is not supported. A restart of the application is required.");
+        }
+    }
+
+    /// <summary>
+    /// Connects listening to changes to the configuration file.
+    /// </summary>
+    public static void ListenForConfigurationChanges()
+    {
+        var configurationPath = GetConfigurationPath();
+        var fileSystemWatcher = new FileSystemWatcher(Directory.GetParent(configurationPath)!.FullName);
+        fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite;
+        fileSystemWatcher.Changed += (_, _) => ReadConfiguration();
+        fileSystemWatcher.EnableRaisingEvents = true;
     }
 
     /// <summary>
