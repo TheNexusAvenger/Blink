@@ -50,7 +50,7 @@ public class Bot
         this.Client.Ready += this.ClientReadyHandler;
         
         // Start the bot.
-        await this.Client.LoginAsync(TokenType.Bot, "TODO");
+        await this.Client.LoginAsync(TokenType.Bot, Configuration.GetConfiguration().DiscordApiKey);
         await this.Client.StartAsync();
     }
 

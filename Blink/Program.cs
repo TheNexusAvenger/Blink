@@ -10,7 +10,7 @@ public class Program
     public static void Main(string[] args)
     {
         // Load the configuration.
-        // TODO
+        Configuration.ReadConfiguration();
         
         // Start the Discord bot.
         Logger.Debug("Starting Discord bot.");
