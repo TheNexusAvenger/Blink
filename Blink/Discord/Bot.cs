@@ -14,6 +14,11 @@ public class Bot
     /// Client used for Discord.
     /// </summary>
     public readonly DiscordSocketClient Client;
+
+    /// <summary>
+    /// Channel cleaners that are running.
+    /// </summary>
+    private readonly Dictionary<ulong, ChannelClearer> _channelClearers = new Dictionary<ulong, ChannelClearer>();
     
     /// <summary>
     /// Returns the static instance of the bot.
@@ -57,8 +62,43 @@ public class Bot
     /// <summary>
     /// Handles the bot being ready.
     /// </summary>
-    private async Task ClientReadyHandler()
+    private Task ClientReadyHandler()
     {
-        // TODO
+        // TODO: Connect configuration changing.
+        this.UpdateChannelClearers();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Creates or updates the channel clearers.
+    /// </summary>
+    private void UpdateChannelClearers()
+    {
+        // Update the channel clearers.
+        var configurationChannels = Configuration.GetConfiguration().Channels;
+        foreach (var configurationChannel in configurationChannels.Where(configuration => this._channelClearers.ContainsKey(configuration.ChannelId)))
+        {
+            Logger.Debug($"Updating channel configuration for {configurationChannel.ChannelId}.");
+            var channelClearer = this._channelClearers[configurationChannel.ChannelId];
+            channelClearer.MessageMaxAgeSeconds = configurationChannel.MessageMaxAgeSeconds;
+            channelClearer.DryRun = configurationChannel.DryRun ?? false;
+        }
+        
+        // Create the new channel clearers.
+        foreach (var configurationChannel in configurationChannels.Where(configuration => !this._channelClearers.ContainsKey(configuration.ChannelId)))
+        {
+            Logger.Debug($"Starting channel configuration for {configurationChannel.ChannelId}.");
+            var channelClearer = new ChannelClearer(this, configurationChannel.ChannelId, configurationChannel.MessageMaxAgeSeconds, configurationChannel.DryRun ?? false);
+            this._channelClearers[configurationChannel.ChannelId] = channelClearer;
+            channelClearer.Start();
+        }
+        
+        // Remove the old channel clearers.
+        foreach (var (channelId, channelClearer) in this._channelClearers.Where(clearer => configurationChannels.All(configuration => configuration.ChannelId != clearer.Key)).ToArray())
+        {
+            Logger.Debug($"Stopping channel configuration for {channelId}.");
+            channelClearer.Stop();
+            this._channelClearers.Remove(channelId);
+        }
     }
 }
