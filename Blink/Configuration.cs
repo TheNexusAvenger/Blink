@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Blink;
@@ -37,11 +38,21 @@ public class Configuration
     /// Static instance of a configuration.
     /// </summary>
     private static Configuration? _configuration;
+
+    /// <summary>
+    /// Semaphore for reloading the configuration.
+    /// </summary>
+    private static SemaphoreSlim _configurationReloadSemaphore = new SemaphoreSlim(1);
+    
+    /// <summary>
+    /// Contents of the last configuration to avoid duplicate reloads.
+    /// </summary>
+    private static string? _lastConfiguration; 
     
     /// <summary>
     /// Event for configuration being loaded or reloaded.
     /// </summary>
-    public static event Action<Configuration>? ConfigrationLoaded;
+    public static event Action<Configuration>? ConfigurationLoaded;
     
     /// <summary>
     /// API key used to communicate with Discord.
@@ -75,11 +86,12 @@ public class Configuration
     /// </summary>
     public static void ReadConfiguration()
     {
-        // Print if the configuration is being reloaded.
+        // Store the original Discord API key in case it changed.
+        // If it is changed, warn that the application needs to be restarted.
+        _configurationReloadSemaphore.Wait();
         string? originalDiscordToken = null;
         if (_configuration != null)
         {
-            Logger.Info("Reloading configuration.");
             originalDiscordToken = _configuration.DiscordApiKey;
         }
         
@@ -96,8 +108,17 @@ public class Configuration
         {
             try
             {
-                _configuration = JsonSerializer.Deserialize(File.ReadAllText(configurationPath), ConfigurationJsonContext.Default.Configuration)!;
-                ConfigrationLoaded?.Invoke(_configuration);
+                var configurationText = File.ReadAllText(configurationPath);
+                if (configurationText != _lastConfiguration)
+                {
+                    _configuration = JsonSerializer.Deserialize(configurationText, ConfigurationJsonContext.Default.Configuration)!;
+                    ConfigurationLoaded?.Invoke(_configuration);
+                    _lastConfiguration = configurationText;
+                    if (originalDiscordToken != null)
+                    {
+                        Logger.Info("Configuration reloaded.");
+                    }
+                }
                 break;
             }
             catch (Exception e)
@@ -118,6 +139,7 @@ public class Configuration
         {
             Logger.Warn("Discord API key refreshing is not supported. A restart of the application is required.");
         }
+        _configurationReloadSemaphore.Release();
     }
 
     /// <summary>
