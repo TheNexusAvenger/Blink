@@ -76,7 +76,7 @@ public class Configuration
     public static void ReadConfiguration()
     {
         // Print if the configuration is being reloaded.
-        string originalDiscordToken = null;
+        string? originalDiscordToken = null;
         if (_configuration != null)
         {
             Logger.Info("Reloading configuration.");
