@@ -120,7 +120,7 @@ public class ChannelClearer
         var oldestMessage = this._oldestMessage;
         if (!this.ShouldDeleteMessage(oldestMessage))
         {
-            Logger.Info($"Oldest message in {this.ChannelId} is too recent. No messages deleted.");
+            Logger.Info($"Oldest message in {this.ChannelId} ({oldestMessage.Id}) is too recent. No messages deleted.");
             return;
         }
         
@@ -144,7 +144,8 @@ public class ChannelClearer
         Logger.Debug($"Found {messagesToDelete.Count} messages to delete in {this.ChannelId}.");
         
         // Get the last message after the deletions.
-        var nextRemainingMessage = (await messageChannel.GetMessagesAsync(messagesToDelete.Last().Id, Direction.After, limit: 2).FlattenAsync())
+        var nextRemainingMessage = (await messageChannel.GetMessagesAsync(messagesToDelete.Last().Id, Direction.After, limit: 5).FlattenAsync())
+            .OrderBy(message => message.Timestamp)
             .FirstOrDefault(message => messagesToDelete.All(otherMessage => otherMessage.Id != message.Id));
         
         // Delete the messages.
@@ -154,7 +155,7 @@ public class ChannelClearer
             var message = messagesToDelete[i];
             if (!this.DryRun)
             {
-                Logger.Debug($"Deleting message {message.Id} in {this.ChannelId}");
+                Logger.Debug($"Deleting message {message.Id} in {this.ChannelId}.");
                 await messageChannel.DeleteMessageAsync(message);
                 Logger.Info($"Deleted message {message.Id} in {this.ChannelId}.");
             }
@@ -174,7 +175,7 @@ public class ChannelClearer
         if (nextRemainingMessage != null)
         {
             this._oldestMessage = nextRemainingMessage;
-            Logger.Debug($"Next message to be deleted in channel {this.ChannelId} will be {nextRemainingMessage.Id}");
+            Logger.Debug($"Next message to be deleted in channel {this.ChannelId} will be {nextRemainingMessage.Id}.");
         }
         else
         {
