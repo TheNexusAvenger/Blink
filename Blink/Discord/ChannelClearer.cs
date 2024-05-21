@@ -185,11 +185,19 @@ public class ChannelClearer
     public void Start()
     {
         if (this._running) return;
+        this._running = true;
         Task.Run(async () =>
         {
             while (this._running)
             {
-                await this.PerformDeleteStepAsync();
+                try
+                {
+                    await this.PerformDeleteStepAsync();
+                }
+                catch (Exception e)
+                {
+                    Logger.Error($"Exception occured while clearing {this.ChannelId}:\n{e}");
+                }
                 await Task.Delay(Configuration.GetConfiguration().DeleteActionDelaySeconds * 1000);
             }
         });
