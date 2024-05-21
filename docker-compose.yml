@@ -6,6 +6,6 @@ services:
       dockerfile: ./Dockerfile
     restart: always
     environment:
-     - CONFIGURATION_FILE_PATH=/configuration/configuration.json
+     - CONFIGURATION_FILE_LOCATION=/configuration/configuration.json
     volumes:
       - ./configuration:/configuration
