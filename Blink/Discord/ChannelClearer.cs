@@ -71,6 +71,17 @@ public class ChannelClearer
     }
 
     /// <summary>
+    /// Checks if a message can be bulk deleted.
+    /// </summary>
+    /// <param name="message">Message to delete.</param>
+    /// <returns>Whether the message can be bulk deleted or not.</returns>
+    private bool CanBulkDelete(IMessage message)
+    {
+        var messageAge = DateTime.Now - message.Timestamp;
+        return messageAge.TotalDays <= 14;
+    }
+
+    /// <summary>
     /// Checks if a message should be deleted.
     /// </summary>
     /// <param name="message">Message to delete.</param>
@@ -152,11 +163,12 @@ public class ChannelClearer
         if (!this.DryRun && messageChannel is ITextChannel textChannel)
         {
             // Split the messages to delete into groups.
+            var bulkDeletableMessages = messagesToDelete.Where(CanBulkDelete).ToList();
             var messagesToBulkDelete = new List<List<IMessage>>();
-            for (var i = 0; i < messagesToDelete.Count; i++)
+            for (var i = 0; i < bulkDeletableMessages.Count; i++)
             {
-                if (i % 8 == 0) messagesToBulkDelete.Add(new List<IMessage>());
-                messagesToBulkDelete.Last().Add(messagesToDelete[i]);
+                if (i % 50 == 0) messagesToBulkDelete.Add(new List<IMessage>());
+                messagesToBulkDelete.Last().Add(bulkDeletableMessages[i]);
             }
             
             // Try to delete the messages.
