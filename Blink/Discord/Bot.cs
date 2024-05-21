@@ -81,10 +81,22 @@ public class Bot
         var configurationChannels = Configuration.GetConfiguration().Channels;
         foreach (var configurationChannel in configurationChannels.Where(configuration => this._channelClearers.ContainsKey(configuration.ChannelId)))
         {
-            Logger.Debug($"Updating channel configuration for {configurationChannel.ChannelId}.");
             var channelClearer = this._channelClearers[configurationChannel.ChannelId];
-            channelClearer.MessageMaxAgeSeconds = configurationChannel.MessageMaxAgeSeconds;
-            channelClearer.DryRun = configurationChannel.DryRun ?? false;
+            var newDryRun = configurationChannel.DryRun ?? false;
+            if (newDryRun || !channelClearer.DryRun)
+            {
+                // Update the configuration if dry run is being turned on or was already off.
+                Logger.Debug($"Updating channel configuration for {configurationChannel.ChannelId}.");
+                channelClearer.MessageMaxAgeSeconds = configurationChannel.MessageMaxAgeSeconds;
+                channelClearer.DryRun = newDryRun;
+            }
+            else
+            {
+                // Reset the channel clearer to disable dry run mode.
+                Logger.Debug($"Resetting channel configuration for {configurationChannel.ChannelId}.");
+                channelClearer.Stop();
+                this._channelClearers.Remove(channelClearer.ChannelId);
+            }
         }
         
         // Create the new channel clearers.
