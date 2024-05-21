@@ -148,6 +148,40 @@ public class ChannelClearer
             .OrderBy(message => message.Timestamp)
             .FirstOrDefault(message => messagesToDelete.All(otherMessage => otherMessage.Id != message.Id));
         
+        // Try to bulk delete the messages.
+        if (!this.DryRun && messageChannel is ITextChannel textChannel)
+        {
+            // Split the messages to delete into groups.
+            var messagesToBulkDelete = new List<List<IMessage>>();
+            for (var i = 0; i < messagesToDelete.Count; i++)
+            {
+                if (i % 8 == 0) messagesToBulkDelete.Add(new List<IMessage>());
+                messagesToBulkDelete.Last().Add(messagesToDelete[i]);
+            }
+            
+            // Try to delete the messages.
+            // Bulk deletes won't work on messages >14 days old. It may not work and require individual deletions.
+            // The optimization to keep the oldest message is not used due to the complications of this sometimes
+            // and sometimes not working. Ideally, if this fails, the individual deletes will take over and fail,
+            // or will complete and set the next message.
+            foreach (var messageGroup in messagesToBulkDelete)
+            {
+                try
+                {
+                    await textChannel.DeleteMessagesAsync(messageGroup);
+                    Logger.Info($"Bulk deleted {messageGroup.Count} messages in {textChannel.Id}.");
+                    foreach (var message in messageGroup)
+                    {
+                        messagesToDelete.Remove(message);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Logger.Error($"Failed to bulk delete {messageGroup.Count} messages in {textChannel.Id}.\n{e}");
+                }
+            }
+        }
+        
         // Delete the messages.
         for (var i = 0; i < messagesToDelete.Count; i++)
         {
