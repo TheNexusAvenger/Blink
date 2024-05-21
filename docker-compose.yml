@@ -1,0 +1,11 @@
+services:
+  blink:
+    container_name: Blink
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    restart: always
+    environment:
+     - CONFIGURATION_FILE_PATH=/configuration/configuration.json
+    volumes:
+      - ./configuration:/configuration
