@@ -147,11 +147,23 @@ public class Configuration
     /// </summary>
     public static void ListenForConfigurationChanges()
     {
+        // Set up file change notifications.
         var configurationPath = GetConfigurationPath();
         var fileSystemWatcher = new FileSystemWatcher(Directory.GetParent(configurationPath)!.FullName);
         fileSystemWatcher.NotifyFilter = NotifyFilters.LastWrite;
         fileSystemWatcher.Changed += (_, _) => ReadConfiguration();
         fileSystemWatcher.EnableRaisingEvents = true;
+        
+        // Occasionally reload the file in a loop.
+        // File change notifications don't seem to work in Docker with volumes.
+        Task.Run(() =>
+        {
+            while (true)
+            {
+                Task.Delay(10000).Wait();
+                ReadConfiguration();
+            }
+        });
     }
 
     /// <summary>
