@@ -1,4 +1,5 @@
-﻿using Blink;
+﻿using System;
+using Blink;
 using Blink.Discord;
 
 public class Program
