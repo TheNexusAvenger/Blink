@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Threading;
 using Blink;
 using Blink.Discord;
 
@@ -20,6 +20,6 @@ public class Program
         Logger.Debug("Started Discord bot.");
         
         // Keep the application alive.
-        while (true) Console.ReadLine();
+        new CancellationToken().WaitHandle.WaitOne();
     }
 }
